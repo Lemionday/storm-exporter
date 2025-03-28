@@ -1,0 +1,32 @@
+---
+name: Build Golang App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'  # Adjust this based on your project needs
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Build application
+        run: go build -v -o storm_exporter
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: storm-exporter
+          path: storm-expoter
