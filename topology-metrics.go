@@ -132,6 +132,31 @@ func NewTopologyMetrics(reg prometheus.Registerer) *topologyMetrics {
 	return m
 }
 
+type topologySummary struct {
+	Name           string `json:"name"`
+	ID             string `json:"id"`
+	UpTime         int    `json:"uptimeSeconds"`
+	TasksTotal     int    `json:"tasksTotal"`
+	WorkersTotal   int    `json:"workersTotal"`
+	ExecutorsTotal int    `json:"executorsTotal"`
+
+	RequestedMemoryOnHeep  float64 `json:"requestedMemOnHeap"`
+	RequestedMemoryOffHeep float64 `json:"requestedMemoryOffHeep"`
+	RequestedTotalMemory   float64 `json:"requestedTotalMemory"`
+	RequestedCPU           float64 `json:"requestedCpu"`
+
+	AssignedMemoryOnHeep  float64 `json:"assignedMemOnHeap"`
+	AssignedMemoryOffHeep float64 `json:"assignedMemoryOffHeep"`
+	AssignedTotalMemory   float64 `json:"assignedTotalMemory"`
+	AssignedCPU           float64 `json:"assignedCpu"`
+
+	StatsTransfered int     `json:"statsTransfered"`
+	StatsEmitted    int     `json:"statsEmitted"`
+	StatsAcked      int     `json:"statsAcked"`
+	StatsFailed     int     `json:"statsFailed"`
+	StatsLatency    float64 `json:"statsLatency"`
+}
+
 func collectTopologyMetrics(m *topologyMetrics, topo topologySummary) {
 	name := topo.Name
 	id := topo.ID

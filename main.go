@@ -12,45 +12,24 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type topologySummary struct {
-	Name           string `json:"name"`
-	ID             string `json:"id"`
-	UpTime         int    `json:"uptimeSeconds"`
-	TasksTotal     int    `json:"tasksTotal"`
-	WorkersTotal   int    `json:"workersTotal"`
-	ExecutorsTotal int    `json:"executorsTotal"`
-
-	RequestedMemoryOnHeep  float64 `json:"requestedMemOnHeap"`
-	RequestedMemoryOffHeep float64 `json:"requestedMemoryOffHeep"`
-	RequestedTotalMemory   float64 `json:"requestedTotalMemory"`
-	RequestedCPU           float64 `json:"requestedCpu"`
-
-	AssignedMemoryOnHeep  float64 `json:"assignedMemOnHeap"`
-	AssignedMemoryOffHeep float64 `json:"assignedMemoryOffHeep"`
-	AssignedTotalMemory   float64 `json:"assignedTotalMemory"`
-	AssignedCPU           float64 `json:"assignedCpu"`
-
-	StatsTransfered int     `json:"statsTransfered"`
-	StatsEmitted    int     `json:"statsEmitted"`
-	StatsAcked      int     `json:"statsAcked"`
-	StatsFailed     int     `json:"statsFailed"`
-	StatsLatency    float64 `json:"statsLatency"`
+type config struct {
+	addr        string
+	stormUIHost string
+	refreshRate int64
 }
 
-type topologiesSummary struct {
-	Topologies []topologySummary `json:"topologies,omitempty"`
-}
+var conf config
 
 func main() {
 	// flag.Parse()
-	addr := os.Getenv("ADDR")
-	if addr == "" {
-		addr = ":8080"
+	conf.addr = os.Getenv("EXPORTER_PORT")
+	if conf.addr == "" {
+		conf.addr = ":8080"
 	}
 
-	stormUIHost := os.Getenv("STORM_UI_HOST")
-	if stormUIHost == "" {
-		stormUIHost = "localhost:8081"
+	conf.stormUIHost = os.Getenv("STORM_UI_HOST")
+	if conf.stormUIHost == "" {
+		conf.stormUIHost = "localhost:8081"
 	}
 
 	refreshRateStr := os.Getenv("REFRESH_RATE")
@@ -71,7 +50,8 @@ func main() {
 	clusterMetric := NewClusterMetrics(reg)
 	go func() {
 		for {
-			collectClusterMetrics(clusterMetric, stormUIHost)
+			collectClusterMetrics(clusterMetric, conf.stormUIHost)
+			log.Println("Updated cluster's metrics")
 			time.Sleep(time.Duration(refreshRate))
 		}
 	}()
@@ -82,8 +62,10 @@ func main() {
 	go func() {
 		for {
 			func() {
-				topologies, err := FetchAndDecode[topologiesSummary](
-					fmt.Sprintf("http://%s/api/v1/topology/summary", stormUIHost),
+				topologies, err := FetchAndDecode[struct {
+					Topologies []topologySummary `json:"topologies,omitempty"`
+				}](
+					fmt.Sprintf("http://%s/api/v1/topology/summary", conf.stormUIHost),
 				)
 				if err != nil {
 					log.Println(err)
@@ -99,7 +81,7 @@ func main() {
 					}](
 						fmt.Sprintf(
 							"http://%s/api/v1/topology/%s?windowSize=5",
-							stormUIHost,
+							conf.stormUIHost,
 							topo.ID,
 						),
 					)
@@ -110,7 +92,9 @@ func main() {
 					collectSpoutMetrics(spoutMetrics, data.Spouts, topo.Name, topo.ID)
 					collectBoltMetrics(boltMetrics, data.Bolts, topo.Name, topo.ID)
 				}
+
 				defer func() {
+					log.Println("Updated topologies's metrics")
 					time.Sleep(time.Duration(refreshRate))
 				}()
 			}()
@@ -118,5 +102,5 @@ func main() {
 	}()
 
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
-	log.Fatal(http.ListenAndServe(addr, nil))
+	log.Fatal(http.ListenAndServe(conf.addr, nil))
 }
