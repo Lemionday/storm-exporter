@@ -1,0 +1,30 @@
+---
+services:
+  storm-exporter:
+    build:
+      context: .
+    container_name: storm-exporter
+    restart: always
+    environment:
+      - STORM_UI_HOST=${STORM_UI_HOST}  # default localhost:8081
+      - REFRESH_INTERVAL=${REFRESH_INTERVAL}  # default 5
+    ports: ['${EXPORTER_PORT}:${EXPORTER_PORT}']
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    volumes: [./prometheus.yml:/etc/prometheus/prometheus.yml]
+    ports: [9090:9090]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports: [3000:3000]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Default login: admin/admin
+    volumes: [grafana-data:/var/lib/grafana]
+
+volumes:
+  grafana-data:
