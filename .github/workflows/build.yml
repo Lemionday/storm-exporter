@@ -30,3 +30,10 @@ jobs:
         with:
           name: storm-exporter
           path: storm-exporter
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: storm-expoter
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
